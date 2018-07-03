@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <!--Spring配置文件的核心点:(数据源,与MyBatis整合,事务控制)-->
+
+
+    <!--引入spring提供的注解解析器-->
+    <context:annotation-config/>
+
+    <!--支持事务注解-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!--Spring的配置文件，这里主要配置和业务有关的-->
+
+    <!--加载存放数据库信息的资源文件-->
+    <context:property-placeholder location="classpath:dbConfig.properties"/>
+
+<!--组件扫描-->
+    <context:component-scan base-package="cn.sitcat"/>
+
+    <!--===============数据源=============================-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="jdbcUrl" value="${jdbc.url}"/>
+        <property name="driverClass" value="${jdbc.driver}"/>
+        <property name="user" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+    <!--================================================================-->
+
+
+    <!--===============配置和MyBaits的整合=============================-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--指定MyBatis全局配置文件位置-->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+        <!--数据源-->
+        <property name="dataSource" ref="dataSource"/>
+        <!--指定Mybatis mapper文件的位置-->
+        <property name="mapperLocations" value="classpath:mapper/*.xml"/>
+    </bean>
+
+    <!--配置扫描器，将mybatis接口的实现加入到ioc容器中-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--扫描所有dao接口的实现，加入到ioc容器中-->
+        <property name="basePackage" value="cn.sitcat.dao"/>
+    </bean>
+
+    <!-- 配置一个可以执行批量的sqlSession -->
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg name="sqlSessionFactory" ref="sqlSessionFactory"></constructor-arg>
+        <constructor-arg name="executorType" value="BATCH"></constructor-arg>
+    </bean>
+    <!--================================================================-->
+
+    <!--========================事物控制的配置========================================-->
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!--控制住数据源-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!--开启基于注解的事务，也可以使用xml形式的事务（必须重要的是都是使用xml配置）-->
+    <aop:config>
+        <!--切入点表达式-->
+        <!--cn.sitcat.service..[即使这个包下有子包也扫描]*[所有类的所有方法](..)[方法里的参数任意多也行]-->
+        <aop:pointcut id="txPoint" expression="execution(* cn.sitcat.service..*(..))"/>
+
+
+        <!--配置事务增强-->
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="txPoint"/>
+    </aop:config>
+
+    <!--配置事务增强，事务如何切入 transaction-manager默认值为transactionManager，如果一样可不写-->
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <!-- 所有方法都是事务方法 -->
+            <tx:method name="*"/>
+            <!--以get开始的所有方法  -->
+            <tx:method name="get*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+    <!--================================================================-->
+    <!--配置一个spring提供的对形象，用于创建一个流程引擎配置对象-->
+    <bean id="processEngineConfiguration" class="org.activiti.spring.SpringProcessEngineConfiguration">
+        <property name="transactionManager" ref="transactionManager"/>
+        <property name="databaseSchemaUpdate" value="true"/>
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!--创建流程引擎对象-->
+    <bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
+        <property name="processEngineConfiguration" ref="processEngineConfiguration"/>
+    </bean>
+
+    <bean id="repositoryService" factory-bean="processEngine" factory-method="getRepositoryService"/>
+</beans>

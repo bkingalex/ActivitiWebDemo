@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.sitcat.dao.ApplicationMapper">
+
+    <select id="save" parameterType="cn.sitcat.bean.ApplicationQueryVo" resultType="int">
+        insert into application
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="title != null">
+                title,
+            </if>
+            <if test="userId != null">
+                applicant,
+            </if>
+            <if test="applyDate != null">
+                applyDate,
+            </if>
+            <if test="status != null">
+                status,
+            </if>
+            <if test="docFilePath != null">
+                docFilePath,
+            </if>
+            <if test="templateId != null">
+                template,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="title != null">
+                #{title},
+            </if>
+            <if test="userId != null">
+                #{userId},
+            </if>
+            <if test="applyDate != null">
+                #{applyDate},
+            </if>
+            <if test="status != null">
+                #{status},
+            </if>
+            <if test="docFilePath != null">
+                #{docFilePath},
+            </if>
+            <if test="templateId != null">
+                #{templateId},
+            </if>
+        </trim>
+        ;
+        SELECT id from application ORDER BY id DESC LIMIT 0,1;
+    </select>
+
+
+    <resultMap id="ApplicationUserTemplateResultMap" type="cn.sitcat.bean.ApplicationQueryVo">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="applicant" property="userId"/>
+        <result column="applydate" property="applyDate"/>
+        <result column="docFilePath" property="docFilePath"/>
+        <result column="status" property="status"/>
+        <result column="templateId" property="templateId"/>
+
+        <!--User映射-->
+        <association property="applicant" javaType="cn.sitcat.bean.User">
+            <id column="applicant" property="id"/>
+            <result column="uname" property="name"/>
+        </association>
+        
+        <!--template类映射-->
+        <association property="template" javaType="cn.sitcat.bean.Template">
+            <id column="templateId" property="id"/>
+            <result column="tname" property="name"/>
+            <result column="tpdKey" property="pdkey"/>
+            <result column="tdocFilePath" property="docfilepath"/>
+        </association>
+    </resultMap>
+    <select id="selectByUserOrstatus" parameterType="cn.sitcat.bean.ApplicationQueryVo" resultMap="ApplicationUserTemplateResultMap">
+        SELECT
+            a.id          id,
+            a.title       title,
+            u.name        uname,
+            a.applicant   applicant,
+            a.applydate   applydate,
+            a.docFilePath docFilePath,
+            a.status      status,
+            a.template    templateId,
+            t.name        tname,
+            t.pdKey       tpdKey,
+            t.docFilePath tdocFilePath
+        FROM application a, user u, template t
+        WHERE a.applicant=#{userId} AND
+              <if test="status != null and status != ''">
+                  a.status = #{status} AND
+              </if>
+              u.id = a.applicant AND t.id = a.template;
+    </select>
+
+    <select id="selectById" parameterType="int" resultType="cn.sitcat.bean.Application">
+        SELECT * from application WHERE id=#{applicationId};
+    </select>
+
+    <update id="updateStatusById" parameterType="cn.sitcat.bean.Application">
+        UPDATE application SET status = #{status} WHERE id=#{id}
+    </update>
+</mapper>

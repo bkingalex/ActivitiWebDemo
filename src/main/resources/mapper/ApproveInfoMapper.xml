@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.sitcat.dao.ApproveInfoMapper">
+    <select id="save" parameterType="cn.sitcat.bean.ApproveInfo" resultType="java.lang.Integer">
+        insert into approveinfo
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="approverId != null">
+                approver,
+            </if>
+            <if test="approveDate != null">
+                approveDate,
+            </if>
+            <if test="approval != null">
+                approval,
+            </if>
+            <if test="comment != null">
+                comment,
+            </if>
+            <if test="application_id != null">
+                application_id,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="approverId != null">
+                #{approverId},
+            </if>
+            <if test="approveDate != null">
+                #{approveDate},
+            </if>
+            <if test="approval != null">
+                #{approval},
+            </if>
+            <if test="comment != null">
+                #{comment},
+            </if>
+            <if test="application_id != null">
+                #{application_id},
+            </if>
+        </trim>
+        ;
+        SELECT id from approveinfo ORDER BY id DESC LIMIT 0,1;
+    </select>
+
+    <resultMap id="ApproInfoList" type="cn.sitcat.bean.ApproveInfo">
+        <id column="id" property="id"/>
+        <result column="approveDate" property="approveDate"/>
+        <result column="approval" property="approval"/>
+        <result column="comment" property="comment"/>
+
+        <association property="approver" javaType="cn.sitcat.bean.User">
+            <id column="approverid" property="id"/>
+            <result column="name" property="name"/>
+        </association>
+
+        <association property="application" javaType="cn.sitcat.bean.Application">
+            <id column="application_id" property="id"/>
+            <result column="title" property="title"/>
+            <result column="status" property="status"/>
+        </association>
+    </resultMap>
+
+    <select id="selectListByApplicationId" parameterType="int" resultMap="ApproInfoList">
+        SELECT
+          ai.id id,
+          ai.approver approverid,
+          ai.approveDate approveDate,
+          ai.approval approval,
+          ai.comment comment,
+          ai.application_id application_id,
+          u.name name,
+          ac.title title,
+          ac.status status
+         FROM approveinfo ai,user u,application ac WHERE ai.application_id = #{ApplicationId} AND ai.approver = u.id AND ai.application_id=ac.id ORDER BY ai.approveDate ASC;
+    </select>
+</mapper>
